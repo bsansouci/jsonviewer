@@ -126,7 +126,7 @@ export default class App extends Component {
             defaultCollapsed={true}
             collapsed={prevTreeCollapsedState ? drill(prevTreeCollapsedState, toCollapsedTreePath(path)).val : false}
             onClick={this.updateCollapseState.bind(this, path)}>
-              {tree.map((val, i) => this.getTreeView(val, prevTreeCollapsedState, [...path, i], i))}
+              {tree.map((val, i) => this.getTreeView(val, prevTreeCollapsedState, [...path, i], i.toString()))}
           </TreeView>
         );
       case "Function":
