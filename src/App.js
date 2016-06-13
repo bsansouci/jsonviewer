@@ -7,7 +7,7 @@ const getType = obj => ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1];
 /* Tree is of the form:
  * type rec Node = {val: Boolean, children: list Node};
  */
-const drill = (tree, [firstElement, ...rest]) => !firstElement ? tree : drill(tree[firstElement].children, rest);
+const drill = (tree, [firstElement, ...rest]) => !firstElement ? tree : drill(tree[firstElement], rest);
 
 const makeCollapsedTree = tree => {
   const type = getType(tree);
@@ -146,8 +146,7 @@ export default class App extends Component {
 
   updateCollapseState(path) {
     let newTree = JSON.parse(JSON.stringify(this.state.prevTreeCollapsedState));
-    let valToUpdate = drill(newTree, path);
-    console.log(valToUpdate);
+    let valToUpdate = drill(newTree, path.reduce((acc, v, i) => i > 0 ? [...acc, "children", v] : [v], []));
     if (valToUpdate) {
       // Dirty dirty mutations
       valToUpdate.val = !valToUpdate.val;
