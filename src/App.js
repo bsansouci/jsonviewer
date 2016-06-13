@@ -7,7 +7,7 @@ const getType = obj => ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1];
 /* Tree is of the form:
  * type rec Node = {val: Boolean, children: list Node};
  */
-const drill = (tree, [firstElement, ...rest]) => !firstElement ? tree : drill(tree[firstElement], rest);
+const drill = (tree, [firstElement, ...rest]) => firstElement == null ? tree : drill(tree[firstElement], rest);
 
 const makeCollapsedTree = tree => {
   const type = getType(tree);
@@ -20,19 +20,19 @@ const makeCollapsedTree = tree => {
       });
       return {
         children,
-        val: false
+        val: true
       };
     case "Array":
       return {
         children: tree.map(makeCollapsedTree),
-        val: false
+        val: true
       };
     case "Function":
     case "String":
     case "Boolean":
     case "Number":
       return {
-        val: false,
+        val: true,
         children: []
       };
     default:
@@ -40,15 +40,21 @@ const makeCollapsedTree = tree => {
   }
 };
 
+const toCollapsedTreePath = path => path.reduce((acc, v, i) => i > 0 ? [...acc, "children", v] : [v], []);
+
 const diffAndMerg = (tree1, tree2) => {
+  // Fast path
+  if (tree1 === tree2) return tree2;
+
   const type1 = getType(tree1);
   const type2 = getType(tree2);
+  
   // Both being undefined
   if (!tree1 && !tree2) return tree2;
 
   // One of them is undefined. Or different types.
-  if (type1 !== type2) return tree2;
-
+  if (type1 !== type2) return tree1;
+  
   switch (type1) {
     case "Object":
       let newObj = {...tree1};
@@ -94,11 +100,11 @@ export default class App extends Component {
   }
 
     
-  getTreeView(tree, prevTreeCollapsedState, path = []) {
+  getTreeView(tree, prevTreeCollapsedState, path = [], name="") {
     const type = getType(tree);
     const key = path.join("|");
-    const label = <span className="node">{type}</span>;
-
+    const label = <span className="node">{name.length > 0 ? name + ": " : ""}{type}</span>;
+    console.log(key, drill(prevTreeCollapsedState, toCollapsedTreePath(path)));
     switch (type) {
       case "Object":
         return (
@@ -106,10 +112,10 @@ export default class App extends Component {
             key={key} 
             nodeLabel={label}
             defaultCollapsed={true}
-            collapsed={prevTreeCollapsedState ? drill(prevTreeCollapsedState, path).val : false}
+            collapsed={prevTreeCollapsedState ? drill(prevTreeCollapsedState, toCollapsedTreePath(path)).val : false}
             onClick={this.updateCollapseState.bind(this, path)}>
               {Object.keys(tree).map((key, i) => 
-                this.getTreeView(tree[key], prevTreeCollapsedState, [...path, key]))}
+                this.getTreeView(tree[key], prevTreeCollapsedState, [...path, key], key))}
           </TreeView>
         );
       case "Array":
@@ -118,16 +124,16 @@ export default class App extends Component {
             key={key} 
             nodeLabel={label} 
             defaultCollapsed={true}
-            collapsed={prevTreeCollapsedState ? drill(prevTreeCollapsedState, path).val : false}
+            collapsed={prevTreeCollapsedState ? drill(prevTreeCollapsedState, toCollapsedTreePath(path)).val : false}
             onClick={this.updateCollapseState.bind(this, path)}>
-              {tree.map((val, i) => this.getTreeView(val, [...path, i]))}
+              {tree.map((val, i) => this.getTreeView(val, prevTreeCollapsedState, [...path, i], i))}
           </TreeView>
         );
       case "Function":
       case "String":
       case "Boolean":
       case "Number":
-        return <div className="node">{type}: {tree.toString()}</div>;
+        return <div className="node">{name} : {type} {tree.toString()}</div>;
       default:
         return;
     }
@@ -146,11 +152,12 @@ export default class App extends Component {
 
   updateCollapseState(path) {
     let newTree = JSON.parse(JSON.stringify(this.state.prevTreeCollapsedState));
-    let valToUpdate = drill(newTree, path.reduce((acc, v, i) => i > 0 ? [...acc, "children", v] : [v], []));
-    if (valToUpdate) {
+    let valToUpdate = drill(newTree, toCollapsedTreePath(path));
+    if (valToUpdate != null) {
       // Dirty dirty mutations
       valToUpdate.val = !valToUpdate.val;
     }
+
     this.setState({prevTreeCollapsedState: newTree});
   }
 
@@ -166,7 +173,7 @@ export default class App extends Component {
 
     let prevTreeCollapsedState = this.state.prevTreeCollapsedState;
     if (!thereWasAParsingError) {
-      prevTreeCollapsedState = diffAndMerg(prevTreeCollapsedState, makeCollapsedTree(tree).children);
+      prevTreeCollapsedState = diffAndMerg(makeCollapsedTree(tree).children, prevTreeCollapsedState);
     }
     this.setState({tree, prevTreeCollapsedState});
   }
