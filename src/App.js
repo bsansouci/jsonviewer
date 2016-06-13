@@ -40,7 +40,7 @@ const makeCollapsedTree = tree => {
   }
 };
 
-const toCollapsedTreePath = path => path.reduce((acc, v, i) => i > 0 ? [...acc, "children", v] : [v], []);
+const toCollapsedTreePath = path => path.reduce((acc, v) => [...acc, "children", v], []);
 
 const diffAndMerg = (tree1, tree2) => {
   // Fast path
@@ -104,7 +104,6 @@ export default class App extends Component {
     const type = getType(tree);
     const key = path.join("|");
     const label = <span className="node">{name.length > 0 ? name + ": " : ""}{type}</span>;
-    console.log(key, drill(prevTreeCollapsedState, toCollapsedTreePath(path)));
     switch (type) {
       case "Object":
         return (
@@ -173,7 +172,7 @@ export default class App extends Component {
 
     let prevTreeCollapsedState = this.state.prevTreeCollapsedState;
     if (!thereWasAParsingError) {
-      prevTreeCollapsedState = diffAndMerg(makeCollapsedTree(tree).children, prevTreeCollapsedState);
+      prevTreeCollapsedState = diffAndMerg(makeCollapsedTree(tree), prevTreeCollapsedState);
     }
     this.setState({tree, prevTreeCollapsedState});
   }
